@@ -72,7 +72,64 @@ class MyGameManager(BoggleGame):
         If `word` is not present on the board, return None.
         """
         word = word.lower()
-        raise NotImplementedError("method find_word_in_board") # TODO: implement your code here
+        if not word:
+            return None
+
+        rows = len(self.board)
+        cols = len(self.board[0])
+
+        def dfs(row, col, index, visited, path):
+            # Check board boundaries
+            if row < 0 or row >= rows or col < 0 or col >= cols:
+                return None
+
+            # Cannot reuse a square
+            if (row, col) in visited:
+                return None
+
+            # Letter must match
+            if self.board[row][col].lower() != word[index]:
+                return None
+
+            visited.add((row, col))
+            path.append((row, col))
+
+            # Entire word found
+            if index == len(word) - 1:
+                return path.copy()
+
+            # Search all eight neighbors
+            for dr in (-1, 0, 1):
+                for dc in (-1, 0, 1):
+                    if dr == 0 and dc == 0:
+                        continue
+
+                    result = dfs(
+                        row + dr,
+                        col + dc,
+                        index + 1,
+                        visited,
+                        path
+                    )
+
+                    if result is not None:
+                        return result
+
+            # Backtrack if this path fails
+            visited.remove((row, col))
+            path.pop()
+
+            return None
+
+        # Try every square as the starting position
+        for row in range(rows):
+            for col in range(cols):
+                result = dfs(row, col, 0, set(), [])
+
+                if result is not None:
+                    return result
+
+        return None
 
     def add_word(self, word: str) -> int:
         """This method is provided for you, but feel free to change it.
@@ -96,6 +153,10 @@ class MyGameManager(BoggleGame):
         """
         self.board = [[c.lower() for c in row] for row in board]
 
+        self.size = len(board)
+        self.words = set()
+        self.last_added_word = []
+
     def get_score(self) -> int:
         """This method is provided for you, but feel free to change it.
         """
@@ -110,7 +171,16 @@ class MyGameManager(BoggleGame):
         Returns:
             A set containing all words found on the board.
         """
-        raise NotImplementedError("method dictionary_driven_search") # TODO: implement your code here
+        found_words = set()
+
+        for word in self.dictionary:
+            if len(word) < 4:
+                continue
+
+            if self.find_word_in_board(word) is not None:
+                found_words.add(word)
+
+        return found_words
 
     def board_driven_search(self) -> Set[str]:
         """Find all words using a board-driven search.
@@ -122,4 +192,48 @@ class MyGameManager(BoggleGame):
         Returns:
             A set containing all words found on the board.
         """
-        raise NotImplementedError("method board_driven_search") # TODO: implement your code here
+        found_words = set()
+
+        rows = len(self.board)
+        if rows == 0:
+            return found_words
+
+        cols = len(self.board[0])
+
+        def dfs(row, col, current_word, visited):
+            if (row, col) in visited:
+                return
+
+            word = current_word + self.board[row][col].lower()
+
+            # Stop if no dictionary word starts with this prefix
+            if not self.dictionary.is_prefix(word):
+                return
+
+            # Save complete words of at least four letters
+            if len(word) >= 4 and self.dictionary.contains(word):
+                found_words.add(word)
+
+            visited.add((row, col))
+
+            # Explore all eight neighboring cells
+            for dr in (-1, 0, 1):
+                for dc in (-1, 0, 1):
+                    if dr == 0 and dc == 0:
+                        continue
+
+                    next_row = row + dr
+                    next_col = col + dc
+
+                    if 0 <= next_row < rows and 0 <= next_col < cols:
+                        dfs(next_row, next_col, word, visited)
+
+            # Backtrack
+            visited.remove((row, col))
+
+        # Start searching from every cell
+        for row in range(rows):
+            for col in range(cols):
+                dfs(row, col, "", set())
+
+        return found_words

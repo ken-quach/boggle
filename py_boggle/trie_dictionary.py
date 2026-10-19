@@ -1,3 +1,4 @@
+from platform import node
 import typing
 from typing import Optional, Dict
 from collections.abc import Iterator
@@ -30,23 +31,54 @@ class TrieDictionary(BoggleDictionary):
         with open(filename) as wordsfile:
             for line in wordsfile:
                 word = line.strip().lower()
-                # Do something with word here
-        raise NotImplementedError("method load_dictionary") # TODO: implement your code here
 
+                if not word:
+                    continue
+
+                current = self.root
+
+                for letter in word:
+                    if letter not in current.children:
+                        current.children[letter] = TrieNode()
+
+                    current = current.children[letter]
+
+                current.is_word = True
+                
     def traverse(self, prefix: str) -> Optional[TrieNode]:
         """
         Traverse will traverse the Trie down a given path of letters `prefix`.
         If there is ever a missing child node, then returns None.
         Otherwise, returns the TrieNode referenced by `prefix`.
         """
-        raise NotImplementedError("method traverse") # TODO: implement your code here
+        current = self.root
+
+        for letter in prefix.lower():
+            if letter not in current.children:
+                return None
+
+            current = current.children[letter]
+
+        return current
+
 
     def is_prefix(self, prefix: str) -> bool:
-        raise NotImplementedError("method is_prefix") # TODO: implement your code here
+        node = self.traverse(prefix)
+
+        return node is not None
 
     def contains(self, word: str) -> bool:
-        raise NotImplementedError("method contains") # TODO: implement your code here
+        node = self.traverse(word)
+
+        return node is not None and node.is_word
 
     def __iter__(self) -> typing.Iterator[str]:
-        raise NotImplementedError("method __iter__") # TODO: implement your code here
+        def dfs(node: TrieNode, prefix: str):
+            if node.is_word:
+                yield prefix
 
+            for letter in sorted(node.children):
+                child = node.children[letter]
+                yield from dfs(child, prefix + letter)
+
+        return dfs(self.root, "")
